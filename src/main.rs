@@ -319,7 +319,14 @@ enum EShMessages {
     EShMsgBuiltinSymbolTable = (1 << 14), // print the builtin symbol table
 }
 
+#[repr(C)]
+enum EShExecutable {
+    EShExVertexFragment,
+    EShExFragment,
+}
+
 #[link(name = "glslang", kind = "static")]
+
 extern "C" {
     fn ShInitialize() -> i32;
 
@@ -344,6 +351,8 @@ extern "C" {
 
     fn ShLinkExt(sh_handle: ShHandle, handles: *const ShHandle, num_handles: i32) -> i32;
 
+    fn ShConstructLinker(executable: EShExecutable, debug_optiions: Options) -> ShHandle;
+
     fn ShGetInfoLog(handle: ShHandle) -> *const c_char;
 
 }
@@ -358,45 +367,95 @@ extern "C" {}
 extern "C" {}
 
 fn main() {
+    let resource: TBuiltInResource = Default::default();
+    let mut compilers: Vec<ShHandle> = Vec::new();
+    let linker: ShHandle;
     unsafe {
         ShInitialize();
-        let resource: TBuiltInResource = Default::default();
-        let compiler = ShConstructCompiler(EShLanguage::EShLangVertex, Options::EOptionNone);
+        linker = ShConstructLinker(EShExecutable::EShExVertexFragment, Options::EOptionNone);
+        if linker == null() {
+            panic!("Cannot locate correct linker!");
+        }
+    }
+
+    compilers.push(compile_shader(
+        "shader.vert.glsl",
+        EShLanguage::EShLangVertex,
+        Options::EOptionSpv,
+        &resource,
+    ));
+
+    compilers.push(compile_shader(
+        "shader.frag.glsl",
+        EShLanguage::EShLangFragment,
+        Options::EOptionSpv,
+        &resource,
+    ));
+
+    unsafe {
+        let ret = ShLinkExt(linker, compilers.as_ptr(), compilers.len() as i32);
+        let result_str = CStr::from_ptr(ShGetInfoLog(linker));
+        let result = result_str.to_str().unwrap();
+        if ret == 0 {
+            println!("Error: Linker Failed!\n{}", result);
+        }
+
+        ShDestruct(linker);
+        for compiler in compilers {
+            ShDestruct(compiler);
+        }
+        ShFinalize();
+    }
+}
+
+fn compile_shader(
+    name: &str,
+    stage: EShLanguage,
+    options: Options,
+    resource: &TBuiltInResource,
+) -> ShHandle {
+    let ret;
+    let source = fs::read_to_string(name).unwrap();
+    let csource = CString::new(source).expect("Failed!");
+    let chars = csource.as_bytes();
+
+    let zchars = Vec::from(chars);
+    let mut strings: Vec<*const u8> = Vec::new();
+    strings.push(zchars.as_ptr());
+
+    let mut lengths: Vec<i32> = Vec::new();
+    lengths.push(chars.len() as i32);
+
+    let compiler: ShHandle;
+    let result_str: &CStr;
+    unsafe {
+        compiler = ShConstructCompiler(stage, options);
         if compiler == null() {
             panic!("Cannot locate correct compiler!");
         }
-        let source = fs::read_to_string("shader.vert.glsl").unwrap();
 
-        let csource = CString::new(source).expect("Failed!");
-        let chars = csource.as_bytes();
-        let len = chars.len() as i32;
-
-        let zchars = Vec::from(chars);
-        let mut strings: Vec<*const u8> = Vec::new();
-        strings.push(zchars.as_ptr());
-
-        let ret = ShCompile(
+        ret = ShCompile(
             compiler,
             strings.as_ptr() as _,
-            1,
-            &len,
+            lengths.len() as i32,
+            lengths.as_ptr(),
             EShOptimizationLevel::EShOptNone,
-            &resource,
+            resource,
             1,
             110,
             false,
-            EShMessages::EShMsgDefault,
+            EShMessages::EShMsgSpvRules,
         );
 
-        let result_str: &CStr = CStr::from_ptr(ShGetInfoLog(compiler));
-        let result = result_str.to_str().unwrap();
-
-        ShDestruct(compiler);
-        ShFinalize();
-        if ret == 0 {
-            println!("Error: Compile Failed!\n{}", result);
-        } else {
-            println!("Compiled OK!")
-        }
+        result_str = CStr::from_ptr(ShGetInfoLog(compiler));
     }
+
+    let result = result_str.to_str().unwrap();
+
+    if ret == 0 {
+        println!("Error: Compile Failed!\n{}", result);
+    } else {
+        println!("Compiled OK!")
+    }
+    compiler
 }
