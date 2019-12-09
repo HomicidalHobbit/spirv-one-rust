@@ -4,6 +4,7 @@ use libc::c_char;
 use libc::c_void;
 use std::ffi::{CStr, CString};
 use std::fs;
+
 use std::ptr::null;
 
 type ShHandle = *const c_void;
@@ -235,42 +236,39 @@ impl Default for TBuiltInResource {
     }
 }
 
-#[repr(C)]
-enum Options {
-    EOptionNone = 0,
-    EOptionIntermediate = (1 << 0),
-    EOptionSuppressInfolog = (1 << 1),
-    EOptionMemoryLeakMode = (1 << 2),
-    EOptionRelaxedErrors = (1 << 3),
-    EOptionGiveWarnings = (1 << 4),
-    EOptionLinkProgram = (1 << 5),
-    EOptionMultiThreaded = (1 << 6),
-    EOptionDumpConfig = (1 << 7),
-    EOptionDumpReflection = (1 << 8),
-    EOptionSuppressWarnings = (1 << 9),
-    EOptionDumpVersions = (1 << 10),
-    EOptionSpv = (1 << 11),
-    EOptionHumanReadableSpv = (1 << 12),
-    EOptionVulkanRules = (1 << 13),
-    EOptionDefaultDesktop = (1 << 14),
-    EOptionOutputPreprocessed = (1 << 15),
-    EOptionOutputHexadecimal = (1 << 16),
-    EOptionReadHlsl = (1 << 17),
-    EOptionCascadingErrors = (1 << 18),
-    EOptionAutoMapBindings = (1 << 19),
-    EOptionFlattenUniformArrays = (1 << 20),
-    EOptionNoStorageFormat = (1 << 21),
-    EOptionKeepUncalled = (1 << 22),
-    EOptionHlslOffsets = (1 << 23),
-    EOptionHlslIoMapping = (1 << 24),
-    EOptionAutoMapLocations = (1 << 25),
-    EOptionDebug = (1 << 26),
-    EOptionStdin = (1 << 27),
-    EOptionOptimizeDisable = (1 << 28),
-    EOptionOptimizeSize = (1 << 29),
-    EOptionInvertY = (1 << 30),
-    EOptionDumpBareVersion = (1 << 31),
-}
+const EOPTION_NONE: i32 = 0;
+const EOPTION_INTERMEDIATE: i32 = (1 << 0);
+const EOPTION_SUPPRESS_INFOLOG: i32 = (1 << 1);
+const EOPTION_MEMORY_LEAK_MODE: i32 = (1 << 2);
+const EOPTION_RELAXED_ERRORS: i32 = (1 << 3);
+const EOPTION_GIVE_WARNINGS: i32 = (1 << 4);
+const EOPTION_LINK_PROGRAM: i32 = (1 << 5);
+const EOPTION_MULTI_THREADED: i32 = (1 << 6);
+const EOPTION_DUMP_CONFIG: i32 = (1 << 7);
+const EOPTION_DUMP_REFLECTION: i32 = (1 << 8);
+const EOPTION_SUPPRESS_WARNINGS: i32 = (1 << 9);
+const EOPTION_DUMP_VERSIONS: i32 = (1 << 10);
+const EOPTION_SPV: i32 = (1 << 11);
+const EOPTION_HUMAN_READABLE_SPV: i32 = (1 << 12);
+const EOPTION_VULKAN_RULES: i32 = (1 << 13);
+const EOPTION_DEFAULT_DESKTOP: i32 = (1 << 14);
+const EOPTION_OUTPUT_PREPROCESSED: i32 = (1 << 15);
+const EOPTION_OUTPUT_HEXADECIMAL: i32 = (1 << 16);
+const EOPTION_READ_HLSL: i32 = (1 << 17);
+const EOPTION_CASCADING_ERRORS: i32 = (1 << 18);
+const EOPTION_AUTO_MAP_BINDINGS: i32 = (1 << 19);
+const EOPTION_FLATTEN_UNIFORM_ARRAYS: i32 = (1 << 20);
+const EOPTION_NO_STORAGE_FORMAT: i32 = (1 << 21);
+const EOPTION_KEEP_UNCALLED: i32 = (1 << 22);
+const EOPTION_HLSL_OFFSETS: i32 = (1 << 23);
+const EOPTION_HLSL_IO_MAPPING: i32 = (1 << 24);
+const EOPTION_AUTO_MAP_LOCATIONS: i32 = (1 << 25);
+const EOPTION_DEBUG: i32 = (1 << 26);
+const EOPTION_STDIN: i32 = (1 << 27);
+const EOPTION_OPTIMIZE_DISABLE: i32 = (1 << 28);
+const EOPTION_OPTIMIZE_SIZE: i32 = (1 << 29);
+const EOPTION_INVERT_Y: i32 = (1 << 30);
+const EOPTION_DUMP_BARE_VERSION: i32 = (1 << 31);
 
 #[repr(C)]
 enum EShLanguage {
@@ -345,13 +343,13 @@ extern "C" {
         messages: EShMessages,
     ) -> i32;
 
-    fn ShConstructCompiler(stage: EShLanguage, debug_options: Options) -> ShHandle;
+    fn ShConstructCompiler(stage: EShLanguage, debug_options: i32) -> ShHandle;
 
     fn ShDestruct(sh_handle: ShHandle);
 
     fn ShLinkExt(sh_handle: ShHandle, handles: *const ShHandle, num_handles: i32) -> i32;
 
-    fn ShConstructLinker(executable: EShExecutable, debug_optiions: Options) -> ShHandle;
+    fn ShConstructLinker(executable: EShExecutable, debug_optiions: i32) -> ShHandle;
 
     fn ShGetInfoLog(handle: ShHandle) -> *const c_char;
 
@@ -372,7 +370,7 @@ fn main() {
     let linker: ShHandle;
     unsafe {
         ShInitialize();
-        linker = ShConstructLinker(EShExecutable::EShExVertexFragment, Options::EOptionNone);
+        linker = ShConstructLinker(EShExecutable::EShExVertexFragment, EOPTION_NONE);
         if linker == null() {
             panic!("Cannot locate correct linker!");
         }
@@ -381,14 +379,14 @@ fn main() {
     compilers.push(compile_shader(
         "shader.vert.glsl",
         EShLanguage::EShLangVertex,
-        Options::EOptionSpv,
+        EOPTION_NONE,
         &resource,
     ));
 
     compilers.push(compile_shader(
         "shader.frag.glsl",
         EShLanguage::EShLangFragment,
-        Options::EOptionSpv,
+        EOPTION_NONE,
         &resource,
     ));
 
@@ -411,7 +409,7 @@ fn main() {
 fn compile_shader(
     name: &str,
     stage: EShLanguage,
-    options: Options,
+    options: i32,
     resource: &TBuiltInResource,
 ) -> ShHandle {
     let ret;
