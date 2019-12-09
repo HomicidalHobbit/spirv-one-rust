@@ -297,25 +297,22 @@ enum EShOptimizationLevel {
     EShOptFull,   // Optimizations that will take more time
 }
 
-#[repr(C)]
-enum EShMessages {
-    EShMsgDefault = 0, // default is to give all required errors and extra warnings
-    EShMsgRelaxedErrors = (1 << 0), // be liberal in accepting input
-    EShMsgSuppressWarnings = (1 << 1), // suppress all warnings, except those required by the specification
-    EShMsgAST = (1 << 2),              // print the AST intermediate representation
-    EShMsgSpvRules = (1 << 3),         // issue messages for SPIR-V generation
-    EShMsgVulkanRules = (1 << 4),      // issue messages for Vulkan-requirements of GLSL for SPIR-V
-    EShMsgOnlyPreprocessor = (1 << 5), // only print out errors produced by the preprocessor
-    EShMsgReadHlsl = (1 << 6),         // use HLSL parsing rules and semantics
-    EShMsgCascadingErrors = (1 << 7), // get cascading errors; risks error-recovery issues, instead of an early exit
-    EShMsgKeepUncalled = (1 << 8),    // for testing, don't eliminate uncalled functions
-    EShMsgHlslOffsets = (1 << 9), // allow block offsets to follow HLSL rules instead of GLSL rules
-    EShMsgDebugInfo = (1 << 10),  // save debug information
-    EShMsgHlslEnable16BitTypes = (1 << 11), // enable use of 16-bit types in SPIR-V for HLSL
-    EShMsgHlslLegalization = (1 << 12), // enable HLSL Legalization messages
-    EShMsgHlslDX9Compatible = (1 << 13), // enable HLSL DX9 compatible mode (right now only for samplers)
-    EShMsgBuiltinSymbolTable = (1 << 14), // print the builtin symbol table
-}
+const ESH_MSG_DEFAULT: i32 = 0; // default is to give all required errors and extra warnings
+const ESH_MSG_RELAXED_ERRORS: i32 = (1 << 0); // be liberal in accepting input
+const ESH_MSG_SUPPRESS_WARNINGS: i32 = (1 << 1); // suppress all warnings, except those required by the specification
+const ESH_MSG_AST: i32 = (1 << 2); // print the AST intermediate representation
+const ESH_MSG_SPV_RULES: i32 = (1 << 3); // issue messages for SPIR-V generation
+const ESH_MSG_VULKAN_RULES: i32 = (1 << 4); // issue messages for Vulkan-requirements of GLSL for SPIR-V
+const ESH_MSG_ONLY_PREPROCESSOR: i32 = (1 << 5); // only print out errors produced by the preprocessor
+const ESH_MSG_READ_HLSL: i32 = (1 << 6); // use HLSL parsing rules and semantics
+const ESH_MSG_CASCADING_ERRORS: i32 = (1 << 7); // get cascading errors; risks error-recovery issues, instead of an early exit
+const ESH_MSG_KEEP_UNCALLED: i32 = (1 << 8); // for testing, don't eliminate uncalled functions
+const ESH_MSG_HLSL_OFFSETS: i32 = (1 << 9); // allow block offsets to follow HLSL rules instead of GLSL rules
+const ESH_MSG_DEBUG_INFO: i32 = (1 << 10); // save debug information
+const ESH_MSG_HLSL_ENABLE16_BIT_TYPES: i32 = (1 << 11); // enable use of 16-bit types in SPIR-V for HLSL
+const ESH_MSG_HLSL_LEGALIZATION: i32 = (1 << 12); // enable HLSL Legalization messages
+const ESH_MSG_HLSL_DX9_COMPATIBLE: i32 = (1 << 13); // enable HLSL DX9 compatible mode (right now only for samplers)
+const ESH_MSG_BUILTIN_SYMBOL_TABLE: i32 = (1 << 14); // print the builtin symbol table
 
 #[repr(C)]
 enum EShExecutable {
@@ -340,7 +337,7 @@ extern "C" {
         debug_options: i32,
         default_version: i32,
         forward_compatible: bool,
-        messages: EShMessages,
+        messages: i32,
     ) -> i32;
 
     fn ShConstructCompiler(stage: EShLanguage, debug_options: i32) -> ShHandle;
@@ -379,14 +376,14 @@ fn main() {
     compilers.push(compile_shader(
         "shader.vert.glsl",
         EShLanguage::EShLangVertex,
-        EOPTION_NONE,
+        EOPTION_AUTO_MAP_LOCATIONS | EOPTION_HUMAN_READABLE_SPV | EOPTION_LINK_PROGRAM,
         &resource,
     ));
 
     compilers.push(compile_shader(
         "shader.frag.glsl",
         EShLanguage::EShLangFragment,
-        EOPTION_NONE,
+        EOPTION_AUTO_MAP_LOCATIONS | EOPTION_HUMAN_READABLE_SPV | EOPTION_LINK_PROGRAM,
         &resource,
     ));
 
@@ -414,6 +411,7 @@ fn compile_shader(
 ) -> ShHandle {
     let ret;
     let source = fs::read_to_string(name).unwrap();
+    print!("Compiling Shader: '{}' ", name);
     let csource = CString::new(source).expect("Failed!");
     let chars = csource.as_bytes();
 
@@ -442,7 +440,7 @@ fn compile_shader(
             1,
             110,
             false,
-            EShMessages::EShMsgSpvRules,
+            ESH_MSG_SPV_RULES | ESH_MSG_VULKAN_RULES | ESH_MSG_AST,
         );
 
         result_str = CStr::from_ptr(ShGetInfoLog(compiler));
@@ -451,9 +449,9 @@ fn compile_shader(
     let result = result_str.to_str().unwrap();
 
     if ret == 0 {
-        println!("Error: Compile Failed!\n{}", result);
+        println!("Failed!\n{}", result);
     } else {
-        println!("Compiled OK!")
+        println!("OK!\n{}", result)
     }
     compiler
 }
