@@ -344,11 +344,13 @@ extern "C" {
 
     fn ShDestruct(sh_handle: ShHandle);
 
-    fn ShLinkExt(sh_handle: ShHandle, handles: *const ShHandle, num_handles: i32) -> i32;
+    fn ShLinkExt(linker: ShHandle, handles: *const ShHandle, num_handles: i32) -> i32;
 
     fn ShConstructLinker(executable: EShExecutable, debug_optiions: i32) -> ShHandle;
 
     fn ShGetInfoLog(handle: ShHandle) -> *const c_char;
+
+    fn ShConstructUniformMap() -> ShHandle;
 
 }
 
@@ -367,7 +369,13 @@ fn main() {
     let linker: ShHandle;
     unsafe {
         ShInitialize();
-        linker = ShConstructLinker(EShExecutable::EShExVertexFragment, EOPTION_NONE);
+        linker = ShConstructLinker(
+            EShExecutable::EShExVertexFragment,
+            EOPTION_AUTO_MAP_BINDINGS
+                | EOPTION_AUTO_MAP_LOCATIONS
+                | EOPTION_HUMAN_READABLE_SPV
+                | EOPTION_LINK_PROGRAM,
+        );
         if linker == null() {
             panic!("Cannot locate correct linker!");
         }
@@ -376,25 +384,44 @@ fn main() {
     compilers.push(compile_shader(
         "shader.vert.glsl",
         EShLanguage::EShLangVertex,
-        EOPTION_AUTO_MAP_LOCATIONS | EOPTION_HUMAN_READABLE_SPV | EOPTION_LINK_PROGRAM,
+        EOPTION_AUTO_MAP_BINDINGS
+            | EOPTION_SPV
+            | EOPTION_AUTO_MAP_LOCATIONS
+            | EOPTION_HUMAN_READABLE_SPV
+            | EOPTION_LINK_PROGRAM,
         &resource,
     ));
 
     compilers.push(compile_shader(
         "shader.frag.glsl",
         EShLanguage::EShLangFragment,
-        EOPTION_AUTO_MAP_LOCATIONS | EOPTION_HUMAN_READABLE_SPV | EOPTION_LINK_PROGRAM,
+        EOPTION_AUTO_MAP_BINDINGS
+            | EOPTION_SPV
+            | EOPTION_AUTO_MAP_LOCATIONS
+            | EOPTION_HUMAN_READABLE_SPV
+            | EOPTION_LINK_PROGRAM,
         &resource,
     ));
 
+    println!("Linker is: {:?}", linker);
+    let mut i = 0;
+    for compiler in &compilers {
+        println!("Compiler [{}] is {:?}", i, compiler);
+        i = i + 1;
+    }
+
     unsafe {
+        let um = ShConstructUniformMap();
+
+        println!("Uniform map at: {:?}", um);
         let ret = ShLinkExt(linker, compilers.as_ptr(), compilers.len() as i32);
         let result_str = CStr::from_ptr(ShGetInfoLog(linker));
         let result = result_str.to_str().unwrap();
         if ret == 0 {
-            println!("Error: Linker Failed!\n{}", result);
+            println!("Error: Linker Failed!");
         }
 
+        println!("{}", result);
         ShDestruct(linker);
         for compiler in compilers {
             ShDestruct(compiler);
@@ -437,8 +464,8 @@ fn compile_shader(
             lengths.as_ptr(),
             EShOptimizationLevel::EShOptNone,
             resource,
-            1,
-            110,
+            options,
+            100,
             false,
             ESH_MSG_SPV_RULES | ESH_MSG_VULKAN_RULES | ESH_MSG_AST,
         );

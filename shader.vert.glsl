@@ -1,15 +1,15 @@
-#version 420
+#version 450
 
 layout (location = 0) in vec3 aPos;
 layout (location = 1) in vec2 aTex;
 
-layout(binding = 0) uniform Matrices
+layout (binding = 2) uniform UForms 
 {
- 	mat4 viewProjectionMatrix;
+	mat4 viewProjectionMatrix;
 	mat4 modelMatrix;
 };
 
-layout (location = 0) out vec2 texCoord;
+layout (location = 4) out vec2 texCoord;
 
 void main()
 {
