@@ -320,6 +320,55 @@ enum EShExecutable {
     EShExFragment,
 }
 
+struct Program {
+    linked: bool,
+}
+
+impl Program {
+    fn new() -> Self {
+        Program { linked: false }
+    }
+}
+
+impl Program {
+    fn add_shader(&mut self) {
+        unimplemented!()
+    }
+    fn link(&mut self, _messages: i32) -> bool {
+        unimplemented!()
+    }
+    fn get_info_log(&self) -> *const c_char {
+        unimplemented!()
+    }
+    fn get_info_debug_log(&self) -> *const c_char {
+        unimplemented!()
+    }
+    fn get_intermediate(&self, _stage: EShLanguage) -> *const c_void {
+        unimplemented!()
+    }
+}
+
+#[repr(C)]
+struct SpvOptions {
+    generate_debug_info: bool,
+    disable_optimizer: bool,
+    optimize_size: bool,
+    disassemble: bool,
+    validate: bool,
+}
+
+impl SpvOptions {
+    fn new() -> Self {
+        SpvOptions {
+            generate_debug_info: false,
+            disable_optimizer: true,
+            optimize_size: false,
+            disassemble: false,
+            validate: false,
+        }
+    }
+}
+
 #[link(name = "glslang", kind = "static")]
 
 extern "C" {
@@ -371,10 +420,7 @@ fn main() {
         ShInitialize();
         linker = ShConstructLinker(
             EShExecutable::EShExVertexFragment,
-            EOPTION_AUTO_MAP_BINDINGS
-                | EOPTION_AUTO_MAP_LOCATIONS
-                | EOPTION_HUMAN_READABLE_SPV
-                | EOPTION_LINK_PROGRAM,
+            EOPTION_VULKAN_RULES | EOPTION_SPV | EOPTION_LINK_PROGRAM,
         );
         if linker == null() {
             panic!("Cannot locate correct linker!");
@@ -384,22 +430,14 @@ fn main() {
     compilers.push(compile_shader(
         "shader.vert.glsl",
         EShLanguage::EShLangVertex,
-        EOPTION_AUTO_MAP_BINDINGS
-            | EOPTION_SPV
-            | EOPTION_AUTO_MAP_LOCATIONS
-            | EOPTION_HUMAN_READABLE_SPV
-            | EOPTION_LINK_PROGRAM,
+        EOPTION_VULKAN_RULES | EOPTION_SPV | EOPTION_LINK_PROGRAM,
         &resource,
     ));
 
     compilers.push(compile_shader(
         "shader.frag.glsl",
         EShLanguage::EShLangFragment,
-        EOPTION_AUTO_MAP_BINDINGS
-            | EOPTION_SPV
-            | EOPTION_AUTO_MAP_LOCATIONS
-            | EOPTION_HUMAN_READABLE_SPV
-            | EOPTION_LINK_PROGRAM,
+        EOPTION_VULKAN_RULES | EOPTION_SPV | EOPTION_LINK_PROGRAM,
         &resource,
     ));
 
