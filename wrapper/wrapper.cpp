@@ -1,6 +1,16 @@
 #include "wrapper.h"
 
-TProgram* create_program()
+void InitializeProcess()
+{
+	glslang::InitializeProcess();
+}
+
+void FinalizeProcess()
+{
+	glslang::FinalizeProcess();
+}
+
+glslang::TProgram* create_program()
 {
 	return nullptr;
 }

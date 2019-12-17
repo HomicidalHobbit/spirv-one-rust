@@ -2,5 +2,7 @@
 #include <Public/ShaderLang.h>
 
 extern "C" {
-	TProgram* create_program();
+	void InitializeProcess();
+	void FinalizeProcess();
+	glslang::TProgram* CreateProgram();
 }

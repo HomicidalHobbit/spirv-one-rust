@@ -1,4 +1,3 @@
-clang++ -c -O3 -std=c++11 -I../bullet/src -Wall -fPIC ../BulletWrapper.cpp
-../../../tools/bin/macos/libman BulletWrapper.o libBulletCollision.a libLinearMath.a libBulletDynamics.a -o ../../lib/macos/libbullet.a
+clang++ -c -O3 -std=c++11 -I../wrapper -Wall ../wrapper/wrapper.cpp
 
 
