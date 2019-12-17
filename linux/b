@@ -1,5 +1,4 @@
-rm wrapper.o
 clang++ -c -O3 -std=c++11 -fPIC -I../wrapper -Wall ../wrapper/wrapper.cpp
 ./libman libHLSL.a libOGLCompiler.a libOSDependent.a libglslang.a wrapper.o -o libspirv.a
-
+rm wrapper.o
 

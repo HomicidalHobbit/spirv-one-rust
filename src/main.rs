@@ -369,8 +369,26 @@ impl SpvOptions {
     }
 }
 
+const ERES_SAMPLER: i32 = 0;
+const ERES_TEXTURE: i32 = 1;
+const ERES_IMAGE: i32 = 2;
+const ERES_UBO: i32 = 3;
+const ERES_SSBO: i32 = 4;
+const ERES_UAV: i32 = 5;
+const ERES_COUNT: i32 = 6;
+
 #[link(name = "spirv", kind = "static")]
 extern "C" {
+
+    fn InitializeProcess();
+    fn FinalizeProcess();
+
+    fn CreateProgram() -> *mut c_void;
+    fn CreateShader(stage: EShLanguage) -> *mut c_void;
+
+    fn DestroyProgram(program: *mut c_void);
+    fn DestroyShader(shader: *mut c_void);
+
     fn ShInitialize() -> i32;
 
     fn ShFinalize() -> i32;
@@ -403,6 +421,12 @@ extern "C" {
 }
 
 fn main() {
+    unsafe {
+        InitializeProcess();
+        new_compile();
+        FinalizeProcess();
+    }
+
     let resource: TBuiltInResource = Default::default();
     let mut compilers: Vec<ShHandle> = Vec::new();
     let linker: ShHandle;
@@ -509,4 +533,14 @@ fn compile_shader(
         println!("OK!\n{}", result)
     }
     compiler
+}
+
+fn new_compile() {
+    unsafe {
+        let program = CreateProgram();
+        let shader = CreateShader(EShLanguage::EShLangVertex);
+
+        DestroyShader(shader);
+        DestroyProgram(program);
+    }
 }
