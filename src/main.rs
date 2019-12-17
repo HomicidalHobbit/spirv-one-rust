@@ -4,6 +4,7 @@ use libc::c_char;
 use libc::c_void;
 use std::ffi::{CStr, CString};
 use std::fs;
+use std::ptr::null_mut;
 
 use std::ptr::null;
 
@@ -271,6 +272,7 @@ const EOPTION_INVERT_Y: i32 = (1 << 30);
 const EOPTION_DUMP_BARE_VERSION: i32 = (1 << 31);
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 enum EShLanguage {
     EShLangVertex,
     EShLangTessControl,
@@ -321,19 +323,28 @@ enum EShExecutable {
 }
 
 struct Program {
+    program: *mut c_void,
     linked: bool,
+    stages: [*mut c_void; EShLanguage::EShLangCount as usize],
 }
 
 impl Program {
     fn new() -> Self {
-        Program { linked: false }
+        unsafe {
+            Program {
+                program: CreateProgram(),
+                linked: false,
+                stages: [null_mut(); EShLanguage::EShLangCount as usize],
+            }
+        }
     }
 }
 
 impl Program {
-    fn add_shader(&mut self) {
-        unimplemented!()
+    fn add_shader(&mut self, shader: &Shader) {
+        self.stages[shader.stage as usize] = shader.shader;
     }
+
     fn link(&mut self, _messages: i32) -> bool {
         unimplemented!()
     }
@@ -345,6 +356,38 @@ impl Program {
     }
     fn get_intermediate(&self, _stage: EShLanguage) -> *const c_void {
         unimplemented!()
+    }
+}
+
+impl Drop for Program {
+    fn drop(&mut self) {
+        if self.program != null_mut() {
+            unsafe { DestroyProgram(self.program) }
+        }
+    }
+}
+
+struct Shader {
+    shader: *mut c_void,
+    stage: EShLanguage,
+}
+
+impl Shader {
+    fn new(stage: EShLanguage) -> Self {
+        unsafe {
+            Shader {
+                shader: CreateShader(stage),
+                stage: stage,
+            }
+        }
+    }
+}
+
+impl Drop for Shader {
+    fn drop(&mut self) {
+        if self.shader != null_mut() {
+            unsafe { DestroyShader(self.shader) }
+        }
     }
 }
 
@@ -388,6 +431,14 @@ extern "C" {
 
     fn DestroyProgram(program: *mut c_void);
     fn DestroyShader(shader: *mut c_void);
+
+    fn SetStringsWithLengthsAndNames(
+        shader: *mut c_void,
+        s: *const *const c_char,
+        l: *const i32,
+        names: *const *const c_char,
+        n: i32,
+    );
 
     fn ShInitialize() -> i32;
 
@@ -536,11 +587,9 @@ fn compile_shader(
 }
 
 fn new_compile() {
-    unsafe {
-        let program = CreateProgram();
-        let shader = CreateShader(EShLanguage::EShLangVertex);
-
-        DestroyShader(shader);
-        DestroyProgram(program);
-    }
+    let mut program = Program::new();
+    let shader = Shader::new(EShLanguage::EShLangVertex);
+    let shader2 = Shader::new(EShLanguage::EShLangFragment);
+    program.add_shader(&shader);
+    program.add_shader(&shader2);
 }
