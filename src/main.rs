@@ -369,8 +369,7 @@ impl SpvOptions {
     }
 }
 
-#[link(name = "glslang", kind = "static")]
-
+#[link(name = "spirv", kind = "static")]
 extern "C" {
     fn ShInitialize() -> i32;
 
@@ -402,15 +401,6 @@ extern "C" {
     fn ShConstructUniformMap() -> ShHandle;
 
 }
-
-#[link(name = "HLSL", kind = "static")]
-extern "C" {}
-
-#[link(name = "OSDependent", kind = "static")]
-extern "C" {}
-
-#[link(name = "OGLCompiler", kind = "static")]
-extern "C" {}
 
 fn main() {
     let resource: TBuiltInResource = Default::default();
