@@ -324,7 +324,7 @@ enum EShExecutable {
 }
 
 struct Bindings {
-    base_binding: [[i32; EShLanguage::EShLangCount as usize]; ERES_COUNT as usize],
+    base_binding: [[i32; EShLanguage::EShLangCount as usize]; ResourceType::EResCount as usize],
     base_binding_for_set: Vec<HashMap<u32, u32>>,
     base_resource_set_binding: Vec<String>,
 }
@@ -332,14 +332,15 @@ struct Bindings {
 impl Bindings {
     fn new() -> Self {
         let mut b = Bindings {
-            base_binding: [[0; EShLanguage::EShLangCount as usize]; ERES_COUNT as usize],
+            base_binding: [[0; EShLanguage::EShLangCount as usize];
+                ResourceType::EResCount as usize],
             base_binding_for_set: Vec::with_capacity(
-                (EShLanguage::EShLangCount as usize) * ERES_COUNT as usize,
+                (EShLanguage::EShLangCount as usize) * ResourceType::EResCount as usize,
             ),
             base_resource_set_binding: Vec::with_capacity(EShLanguage::EShLangCount as usize),
         };
         b.base_binding_for_set.resize_with(
-            (EShLanguage::EShLangCount as usize) * ERES_COUNT as usize,
+            (EShLanguage::EShLangCount as usize) * ResourceType::EResCount as usize,
             Default::default,
         );
         b.base_resource_set_binding
@@ -452,13 +453,16 @@ impl SpvOptions {
     }
 }
 
-const ERES_SAMPLER: i32 = 0;
-const ERES_TEXTURE: i32 = 1;
-const ERES_IMAGE: i32 = 2;
-const ERES_UBO: i32 = 3;
-const ERES_SSBO: i32 = 4;
-const ERES_UAV: i32 = 5;
-const ERES_COUNT: i32 = 6;
+#[repr(C)]
+enum ResourceType {
+    EResSampler,
+    EResTexture,
+    EResImage,
+    EResUbo,
+    EResSsbo,
+    EResUav,
+    EResCount,
+}
 
 #[link(name = "spirv", kind = "static")]
 extern "C" {
@@ -474,6 +478,8 @@ extern "C" {
 
     fn SetAutoMapBindings(shader: *mut c_void, map: bool);
     fn SetAutoMapLocations(shader: *mut c_void, map: bool);
+
+    fn SetShiftBinding(shader: *mut c_void, res: ResourceType, base: u32);
 
     fn SetStringsWithLengthsAndNames(
         shader: *mut c_void,
@@ -634,8 +640,10 @@ fn new_compile() {
     let mut program = Program::new();
     let mut shader = Shader::new(EShLanguage::EShLangVertex);
     let shader2 = Shader::new(EShLanguage::EShLangFragment);
+
     shader.set_automap_bindings(true);
     shader.set_automap_locations(true);
+
     program.add_shader(&shader);
     program.add_shader(&shader2);
 }
