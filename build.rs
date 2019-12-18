@@ -18,7 +18,7 @@ fn set_libs() -> String {
 }
 #[cfg(target_os = "linux")]
 fn set_libs() -> String {
-    println!("cargo:rustc-link-lib=static=stdc++");
+    println!("cargo:rustc-link-lib=static=c++");
     String::from("linux")
 }
 #[cfg(target_os = "windows")]

@@ -2,6 +2,7 @@
 #![allow(non_snake_case)]
 use libc::c_char;
 use libc::c_void;
+use std::collections::HashMap;
 use std::ffi::{CStr, CString};
 use std::fs;
 use std::ptr::null_mut;
@@ -322,6 +323,31 @@ enum EShExecutable {
     EShExFragment,
 }
 
+struct Bindings {
+    base_binding: [[i32; EShLanguage::EShLangCount as usize]; ERES_COUNT as usize],
+    base_binding_for_set: Vec<HashMap<u32, u32>>,
+    base_resource_set_binding: Vec<String>,
+}
+
+impl Bindings {
+    fn new() -> Self {
+        let mut b = Bindings {
+            base_binding: [[0; EShLanguage::EShLangCount as usize]; ERES_COUNT as usize],
+            base_binding_for_set: Vec::with_capacity(
+                (EShLanguage::EShLangCount as usize) * ERES_COUNT as usize,
+            ),
+            base_resource_set_binding: Vec::with_capacity(EShLanguage::EShLangCount as usize),
+        };
+        b.base_binding_for_set.resize_with(
+            (EShLanguage::EShLangCount as usize) * ERES_COUNT as usize,
+            Default::default,
+        );
+        b.base_resource_set_binding
+            .resize_with(EShLanguage::EShLangCount as usize, Default::default);
+        b
+    }
+}
+
 struct Program {
     program: *mut c_void,
     linked: bool,
@@ -383,6 +409,20 @@ impl Shader {
     }
 }
 
+impl Shader {
+    fn set_automap_bindings(&mut self, map: bool) {
+        unsafe {
+            SetAutoMapBindings(self.shader, map);
+        }
+    }
+
+    fn set_automap_locations(&mut self, map: bool) {
+        unsafe {
+            SetAutoMapLocations(self.shader, map);
+        }
+    }
+}
+
 impl Drop for Shader {
     fn drop(&mut self) {
         if self.shader != null_mut() {
@@ -431,6 +471,9 @@ extern "C" {
 
     fn DestroyProgram(program: *mut c_void);
     fn DestroyShader(shader: *mut c_void);
+
+    fn SetAutoMapBindings(shader: *mut c_void, map: bool);
+    fn SetAutoMapLocations(shader: *mut c_void, map: bool);
 
     fn SetStringsWithLengthsAndNames(
         shader: *mut c_void,
@@ -587,9 +630,12 @@ fn compile_shader(
 }
 
 fn new_compile() {
+    let _bindings = Bindings::new();
     let mut program = Program::new();
-    let shader = Shader::new(EShLanguage::EShLangVertex);
+    let mut shader = Shader::new(EShLanguage::EShLangVertex);
     let shader2 = Shader::new(EShLanguage::EShLangFragment);
+    shader.set_automap_bindings(true);
+    shader.set_automap_locations(true);
     program.add_shader(&shader);
     program.add_shader(&shader2);
 }

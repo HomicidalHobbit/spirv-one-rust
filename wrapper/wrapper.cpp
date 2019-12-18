@@ -30,6 +30,16 @@ void DestroyShader(glslang::TShader* shader)
 	shader->~TShader();
 }
 
+void SetAutoMapBindings(glslang::TShader* shader, bool map)
+{
+	shader->setAutoMapBindings(map);
+}
+
+void SetAutoMapLocations(glslang::TShader* shader, bool map)
+{
+	shader->setAutoMapLocations(map);
+}
+
 void SetShiftBinding(glslang::TShader* shader, glslang::TResourceType res, unsigned int base)
 {
 	shader->setShiftBinding(res, base);
